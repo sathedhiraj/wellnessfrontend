@@ -111,7 +111,7 @@ export function Navbar() {
                 <User size={20} />
               </Link>
               <Link
-                href="/pages/wishlist"
+                href="/info/wishlist"
                 className="p-2 text-warmgray-600 hover:text-forest transition-colors relative"
                 aria-label="Wishlist"
               >

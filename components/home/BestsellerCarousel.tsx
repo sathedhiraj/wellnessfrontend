@@ -17,12 +17,44 @@ export function BestsellerCarousel() {
   useEffect(() => {
     async function fetchBestsellers() {
       try {
-        const res = await fetch(`${API_URL}/products`);
+        const res = await fetch(`${API_URL}/products?limit=50`);
         if (!res.ok) throw new Error("API error");
-        const data: Product[] = await res.json();
-        // Filter products where isBestseller is true from backend data
-        const filtered = data.filter((p) => p.isBestseller);
-        setBestsellers(filtered.length > 0 ? filtered : getBestsellers());
+        const json = await res.json();
+
+        // Backend returns { data: [...], pagination: {...} }
+        const raw: Record<string, unknown>[] = Array.isArray(json) ? json : (json.data ?? []);
+
+        // Normalize backend shape → frontend Product shape
+        const normalized = raw.map((p) => ({
+          ...p,
+          // variants: convert stock (number) → inStock (boolean)
+          variants: Array.isArray(p.variants)
+            ? (p.variants as Record<string, unknown>[]).map((v) => ({
+                ...v,
+                inStock:
+                  typeof v.inStock === "boolean"
+                    ? v.inStock
+                    : ((v.stock as number) ?? 0) > 0,
+              }))
+            : [],
+          // collection is already mapped by formatProduct on backend
+          collection: Array.isArray(p.collection) ? p.collection : [],
+          // hoverImage fallback
+          hoverImage:
+            p.hoverImage ??
+            (Array.isArray(p.images) ? p.images[0] : "") ??
+            "",
+          isBestseller: Boolean(p.isBestseller),
+          isFeatured: Boolean(p.isFeatured),
+          tags: Array.isArray(p.tags) ? p.tags : [],
+          benefits: Array.isArray(p.benefits) ? p.benefits : [],
+          rating: typeof p.rating === "number" ? p.rating : 0,
+          reviewCount: typeof p.reviewCount === "number" ? p.reviewCount : 0,
+        }));
+
+        const filtered = normalized.filter((p) => p.isBestseller);
+        // Show backend bestsellers; fall back to mock only when none exist
+        setBestsellers(filtered.length > 0 ? (filtered as unknown as Product[]) : getBestsellers());
       } catch {
         // Fallback to mock data if backend is unreachable
         setBestsellers(getBestsellers());

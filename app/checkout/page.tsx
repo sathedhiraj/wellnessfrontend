@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCartStore } from "@/lib/store/cart-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { Check, Package, CreditCard, MapPin, ChevronRight } from "lucide-react";
 
 const STEPS = [
@@ -16,12 +18,38 @@ function formatINR(n: number) {
 
 export default function CheckoutPage() {
   const { items, subtotal, discount, shipping, grandTotal, clearCart } = useCartStore();
+  const user = useAuthStore((s) => s.user);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      router.push("/account/login?redirect=/checkout");
+    }
+  }, [user, router]);
+
   const [step, setStep] = useState(1);
   const [placed, setPlaced] = useState(false);
 
   const [address, setAddress] = useState({
-    name: "", phone: "", email: "", line1: "", city: "", state: "", pincode: "",
+    name: user?.name || "",
+    phone: user?.phone || "",
+    email: user?.email || "",
+    line1: user?.addresses?.[0]?.line1 || "",
+    city: user?.addresses?.[0]?.city || "",
+    state: user?.addresses?.[0]?.state || "",
+    pincode: user?.addresses?.[0]?.pincode || "",
   });
+
+  if (!user) {
+    return (
+      <section className="section-py bg-cream-50 min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-sage-200 border-t-forest rounded-full animate-spin" />
+          <p className="text-warmgray-400 text-sm font-medium">Redirecting to login…</p>
+        </div>
+      </section>
+    );
+  }
   const [shippingMethod, setShippingMethod] = useState("standard");
   const [payment, setPayment] = useState("prepaid");
 

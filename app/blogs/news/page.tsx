@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { blogPosts } from "@/lib/mock-data/blog-posts";
+import { blogPosts, type BlogPost } from "@/lib/mock-data/blog-posts";
 import type { Metadata } from "next";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export const metadata: Metadata = {
   title: "Skin, Decoded — The Wave of Wellness Blog",
@@ -9,7 +12,21 @@ export const metadata: Metadata = {
     "Science-backed skincare education. Learn how ingredients work, build better routines, and understand your skin.",
 };
 
-export default function BlogListingPage() {
+async function fetchBlogs(): Promise<BlogPost[]> {
+  try {
+    const res = await fetch(`${API_URL}/blog/posts`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) throw new Error("API error");
+    return await res.json();
+  } catch {
+    return blogPosts;
+  }
+}
+
+export default async function BlogListingPage() {
+  const posts = await fetchBlogs();
+
   return (
     <>
       {/* Banner */}
@@ -27,7 +44,7 @@ export default function BlogListingPage() {
       <section className="section-py bg-cream-50">
         <div className="container-padded">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {blogPosts.map((post) => (
+            {posts.map((post: BlogPost) => (
               <Link
                 key={post.id}
                 href={`/blogs/news/${post.slug}`}
@@ -42,7 +59,7 @@ export default function BlogListingPage() {
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                   <div className="absolute top-3 left-3">
-                    {post.tags[0] && (
+                    {post.tags?.[0] && (
                       <span className="badge-bestseller text-[10px]">{post.tags[0]}</span>
                     )}
                   </div>

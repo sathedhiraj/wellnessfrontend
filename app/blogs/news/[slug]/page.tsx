@@ -1,11 +1,33 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { getBlogPostBySlug, blogPosts } from "@/lib/mock-data/blog-posts";
+import { getBlogPostBySlug, blogPosts, type BlogPost } from "@/lib/mock-data/blog-posts";
 import type { Metadata } from "next";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
+async function fetchBlogPost(slug: string): Promise<BlogPost | undefined> {
+  try {
+    const res = await fetch(`${API_URL}/blog/posts/${slug}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) throw new Error("API error");
+    return await res.json();
+  } catch {
+    return getBlogPostBySlug(slug);
+  }
+}
+
 export async function generateStaticParams() {
-  return blogPosts.map((p) => ({ slug: p.slug }));
+  try {
+    const res = await fetch(`${API_URL}/blog/posts`);
+    if (!res.ok) throw new Error();
+    const posts = await res.json();
+    return posts.map((p: any) => ({ slug: p.slug }));
+  } catch {
+    return blogPosts.map((p) => ({ slug: p.slug }));
+  }
 }
 
 export async function generateMetadata({
@@ -14,7 +36,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = getBlogPostBySlug(slug);
+  const post = await fetchBlogPost(slug);
   if (!post) return {};
   return {
     title: post.title,
@@ -28,10 +50,23 @@ export default async function BlogArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = getBlogPostBySlug(slug);
+  const post = await fetchBlogPost(slug);
   if (!post) notFound();
 
-  const related = blogPosts.filter((p) => p.slug !== slug).slice(0, 3);
+  // Load from API or mock
+  let allBlogs: any[] = [];
+  try {
+    const res = await fetch(`${API_URL}/blog/posts`);
+    if (res.ok) {
+      allBlogs = await res.json();
+    } else {
+      allBlogs = blogPosts;
+    }
+  } catch {
+    allBlogs = blogPosts;
+  }
+
+  const related = allBlogs.filter((p) => p.slug !== slug).slice(0, 3);
 
   return (
     <>

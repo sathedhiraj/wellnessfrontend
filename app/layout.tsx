@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "http://localhost:3000",
+    url: "http://localhost:3000/api/v1",
     siteName: "Wave of Wellness",
     title: "Wave of Wellness — Bodycare Backed by Science",
     description: "Science-backed bodycare formulated intentionally for real routines.",

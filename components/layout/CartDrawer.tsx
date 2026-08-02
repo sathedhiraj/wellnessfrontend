@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { X, Minus, Plus, Trash2, Copy, Check, ShoppingBag, Tag } from "lucide-react";
 import { useCartStore } from "@/lib/store/cart-store";
+import { useAuthStore } from "@/lib/store/auth-store";
 import { coupons } from "@/lib/mock-data/coupons";
 import { useState } from "react";
 
@@ -29,6 +30,8 @@ export function CartDrawer() {
     shipping,
     grandTotal,
   } = useCartStore();
+
+  const user = useAuthStore((s) => s.user);
 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -270,7 +273,7 @@ export function CartDrawer() {
 
             <div className="px-4 pb-5">
               <Link
-                href="/checkout"
+                href={user ? "/checkout" : "/account/login?redirect=/checkout"}
                 onClick={closeCart}
                 className="btn-coral w-full text-center py-3.5 text-base"
               >

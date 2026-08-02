@@ -1,5 +1,5 @@
 "use client";
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,11 +7,13 @@ import {
   Heart, ShoppingBag, Star, ChevronDown, ChevronUp,
   Truck, RefreshCcw, Shield, Share2, Check
 } from "lucide-react";
-import { getProductByHandle, products } from "@/lib/mock-data/products";
+import { getProductByHandle, products, type Product } from "@/lib/mock-data/products";
 import { useCartStore } from "@/lib/store/cart-store";
 import { useWishlistStore } from "@/lib/store/wishlist-store";
 import { ProductCard } from "@/components/ui/ProductCard";
 
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"
 const REVIEWS = [
   { name: "Ananya S.", rating: 5, date: "2026-07-12", title: "Game changer!", body: "Absolutely love this. My skin has transformed in 6 weeks." },
   { name: "Priya M.", rating: 5, date: "2026-07-08", title: "Finally a body wash that works!", body: "Smells amazing and actually makes my skin glow. Repurchasing for sure." },
@@ -44,19 +46,67 @@ export default function ProductDetailPage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = use(params);
-  const product = getProductByHandle(handle);
-  if (!product) notFound();
 
+  const [product, setProduct] = useState<Product | null | undefined>(undefined); // undefined = loading
   const [selectedImg, setSelectedImg] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const variant = product.variants[selectedVariant];
   const addItem = useCartStore((s) => s.addItem);
   const toggle = useWishlistStore((s) => s.toggle);
-  const isWishlisted = useWishlistStore((s) => s.isWishlisted(product.id));
+  const isWishlisted = useWishlistStore((s) => s.isWishlisted(product?.id ?? ""));
 
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        const res = await fetch(`${API_URL}/products/${handle}`);
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        // Normalize backend response: variants use `stock` (int) → `inStock` (bool)
+        const normalized: Product = {
+          ...data,
+          benefits: Array.isArray(data.benefits)
+            ? data.benefits
+            : JSON.parse(data.benefits),
+          variants: data.variants.map((v: Record<string, unknown>) => ({
+            ...v,
+            inStock:
+              typeof v.inStock === "boolean"
+                ? v.inStock
+                : ((v.stock as number) ?? 0) > 0,
+          })),
+          // Backend products may not have all mock fields – fill defaults
+          hoverImage: data.hoverImage ?? data.images?.[0] ?? "",
+          isFeatured: data.isFeatured ?? false,
+          tags: data.tags ?? [],
+        };
+        setProduct(normalized);
+      } catch {
+        // Fallback to local mock data
+        const mock = getProductByHandle(handle);
+        setProduct(mock ?? null); // null = confirmed not found
+      }
+    }
+    fetchProduct();
+  }, [handle]);
+
+  // Still loading
+  if (product === undefined) {
+    return (
+      <section className="section-py bg-cream-50 min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-sage-200 border-t-forest rounded-full animate-spin" />
+          <p className="text-warmgray-400 text-sm font-medium">Loading product…</p>
+        </div>
+      </section>
+    );
+  }
+
+  // Not found in backend or mock data
+  if (product === null) notFound();
+
+  const variant = product.variants[selectedVariant];
   const discountPct = Math.round(((variant.mrp - variant.price) / variant.mrp) * 100);
 
   const handleAddToCart = () => {
@@ -68,6 +118,7 @@ export default function ProductDetailPage({
   const related = products
     .filter((p) => p.id !== product.id && p.collection.some((c) => product.collection.includes(c)))
     .slice(0, 4);
+
 
   return (
     <>
@@ -97,9 +148,8 @@ export default function ProductDetailPage({
                   <button
                     key={i}
                     onClick={() => setSelectedImg(i)}
-                    className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                      selectedImg === i ? "border-forest" : "border-transparent opacity-60 hover:opacity-100"
-                    }`}
+                    className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${selectedImg === i ? "border-forest" : "border-transparent opacity-60 hover:opacity-100"
+                      }`}
                   >
                     <Image src={img} alt={`View ${i + 1}`} fill className="object-cover" sizes="64px" />
                   </button>
@@ -164,11 +214,10 @@ export default function ProductDetailPage({
                       <button
                         key={v.id}
                         onClick={() => setSelectedVariant(i)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all ${
-                          selectedVariant === i
-                            ? "border-forest bg-forest text-cream-50"
-                            : "border-warmgray-200 text-warmgray-600 hover:border-sage-400"
-                        } ${!v.inStock ? "opacity-50 cursor-not-allowed line-through" : ""}`}
+                        className={`px-4 py-2 rounded-full text-sm font-medium border-2 transition-all ${selectedVariant === i
+                          ? "border-forest bg-forest text-cream-50"
+                          : "border-warmgray-200 text-warmgray-600 hover:border-sage-400"
+                          } ${!v.inStock ? "opacity-50 cursor-not-allowed line-through" : ""}`}
                         disabled={!v.inStock}
                       >
                         {v.name} {!v.inStock && "(Sold Out)"}
@@ -203,13 +252,12 @@ export default function ProductDetailPage({
                 <button
                   onClick={handleAddToCart}
                   disabled={!variant.inStock}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full font-semibold text-base transition-all ${
-                    added
-                      ? "bg-sage-500 text-white"
-                      : variant.inStock
+                  className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-full font-semibold text-base transition-all ${added
+                    ? "bg-sage-500 text-white"
+                    : variant.inStock
                       ? "bg-forest text-cream-50 hover:bg-forest-light hover:shadow-lg hover:-translate-y-0.5"
                       : "bg-warmgray-200 text-warmgray-400 cursor-not-allowed"
-                  }`}
+                    }`}
                 >
                   {added ? <><Check size={18} /> Added to Cart!</> : <><ShoppingBag size={18} /> Add to Cart</>}
                 </button>
@@ -224,11 +272,10 @@ export default function ProductDetailPage({
                       mrp: variant.mrp,
                     })
                   }
-                  className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
-                    isWishlisted
-                      ? "border-coral bg-coral/10"
-                      : "border-warmgray-200 hover:border-coral"
-                  }`}
+                  className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${isWishlisted
+                    ? "border-coral bg-coral/10"
+                    : "border-warmgray-200 hover:border-coral"
+                    }`}
                   aria-label="Wishlist"
                 >
                   <Heart size={18} className={isWishlisted ? "fill-coral text-coral" : "text-warmgray-400"} />

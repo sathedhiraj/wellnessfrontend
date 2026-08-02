@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      // Redirect old /pages/* routes to new /info/* routes
+      { source: "/pages/:slug*", destination: "/info/:slug*", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

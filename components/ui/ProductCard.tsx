@@ -59,7 +59,7 @@ export function ProductCard({ product, showVariants = true }: ProductCardProps) 
           onMouseLeave={() => setHovered(false)}
         >
           <Image
-            src={hovered && product.hoverImage ? product.hoverImage : product.images[0]}
+            src={hovered && product.hoverImage ? product.hoverImage : (product.images[0] || "/hero-banner.png")}
             alt={product.title}
             fill
             className="object-cover transition-all duration-500 group-hover:scale-105"

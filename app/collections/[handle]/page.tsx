@@ -9,6 +9,7 @@ import { SlidersHorizontal, ChevronDown } from "lucide-react";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
+
 const COLLECTION_META: Record<string, { title: string; description: string }> = {
   shop: {
     title: "Shop All",
@@ -45,8 +46,6 @@ export default function CollectionPage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = use(params);
-  const meta = COLLECTION_META[handle];
-  if (!meta) notFound();
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,8 +62,11 @@ export default function CollectionPage({
         const res = await fetch(endpoint);
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
+        
+        const productsList = handle === "shop" ? data.data : data;
+
         // Normalize: backend uses `stock` count, frontend expects `inStock` boolean
-        const normalized: Product[] = data.map((p: Product & { variants: (Product["variants"][0] & { stock?: number })[] }) => ({
+        const normalized: Product[] = productsList.map((p: Product & { variants: (Product["variants"][0] & { stock?: number })[] }) => ({
           ...p,
           benefits: Array.isArray(p.benefits) ? p.benefits : JSON.parse(p.benefits as unknown as string),
           variants: p.variants.map((v) => ({
@@ -81,6 +83,9 @@ export default function CollectionPage({
     }
     fetchProducts();
   }, [handle]);
+
+  const meta = COLLECTION_META[handle];
+  if (!meta) notFound();
 
   let products = [...allProducts];
   if (filterInStock) {

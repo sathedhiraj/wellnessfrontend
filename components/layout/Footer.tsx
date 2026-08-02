@@ -12,18 +12,18 @@ const SHOP_LINKS = [
 ];
 
 const QUICK_LINKS = [
-  { name: "Our Story", href: "/pages/our-story" },
+  { name: "Our Story", href: "/info/our-story" },
   { name: "Skin, Decoded Blog", href: "/blogs/news" },
   { name: "Track Your Order", href: "/account" },
-  { name: "Contact Us", href: "/pages/contact" },
+  { name: "Contact Us", href: "/info/contact" },
 ];
 
 const POLICY_LINKS = [
-  { name: "Shipping Policy", href: "/pages/shipping-policy" },
-  { name: "Return & Refund Policy", href: "/pages/refund-policy" },
-  { name: "Privacy Policy", href: "/pages/privacy-policy" },
-  { name: "Cookie Policy", href: "/pages/cookie-policy" },
-  { name: "Terms & Conditions", href: "/pages/terms" },
+  { name: "Shipping Policy", href: "/info/shipping-policy" },
+  { name: "Return & Refund Policy", href: "/info/refund-policy" },
+  { name: "Privacy Policy", href: "/info/privacy-policy" },
+  { name: "Cookie Policy", href: "/info/cookie-policy" },
+  { name: "Terms & Conditions", href: "/info/terms" },
 ];
 
 // Inline SVGs for brand icons (removed from lucide-react)
