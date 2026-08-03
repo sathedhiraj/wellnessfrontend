@@ -108,13 +108,36 @@ export const useCartStore = create<CartStore>()(
 
       setCouponCode: (code) => set({ couponCode: code, couponError: "" }),
 
-      applyCoupon: () => {
+      applyCoupon: async () => {
         const { couponCode, subtotal } = get();
-        const result = validateCoupon(couponCode, subtotal());
-        if (result.valid && result.coupon) {
-          set({ appliedCoupon: result.coupon, couponError: "" });
-        } else {
-          set({ couponError: result.error || "Invalid coupon.", appliedCoupon: null });
+        if (!couponCode.trim()) return;
+        set({ couponError: "" });
+        try {
+          const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+          const res = await fetch(`${API_BASE}/cart/apply-coupon`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ code: couponCode, cartTotal: subtotal() }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const tempCoupon = {
+              code: data.code,
+              description: data.message || "Discount applied",
+              type: "flat" as const,
+              value: data.discount,
+              minOrder: 0,
+            };
+            set({ appliedCoupon: tempCoupon, couponError: "" });
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            set({ couponError: errData.error || "Invalid or expired coupon code.", appliedCoupon: null });
+          }
+        } catch {
+          set({ couponError: "Failed to apply coupon. Network error.", appliedCoupon: null });
         }
       },
 

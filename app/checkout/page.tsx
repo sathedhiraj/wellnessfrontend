@@ -17,8 +17,8 @@ function formatINR(n: number) {
 }
 
 export default function CheckoutPage() {
-  const { items, subtotal, discount, shipping, grandTotal, clearCart } = useCartStore();
-  const user = useAuthStore((s) => s.user);
+  const { items, subtotal, discount, shipping, grandTotal, clearCart, couponCode } = useCartStore();
+  const { user, fetchOrders } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
@@ -29,6 +29,10 @@ export default function CheckoutPage() {
 
   const [step, setStep] = useState(1);
   const [placed, setPlaced] = useState(false);
+  const [orderNumber, setOrderNumber] = useState<string>("");
+  const [orderError, setOrderError] = useState<string>("");
+  const [isPlacing, setIsPlacing] = useState(false);
+  const [saveAddressChecked, setSaveAddressChecked] = useState(false);
 
   const [address, setAddress] = useState({
     name: user?.name || "",
@@ -53,9 +57,98 @@ export default function CheckoutPage() {
   const [shippingMethod, setShippingMethod] = useState("standard");
   const [payment, setPayment] = useState("prepaid");
 
-  const handlePlaceOrder = () => {
-    clearCart();
-    setPlaced(true);
+  const handlePlaceOrder = async () => {
+    setOrderError("");
+    setIsPlacing(true);
+
+    try {
+      const API_BASE =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+
+      // Read JWT stored by auth-store after real login
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem("wow-token")
+          : null;
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const payload = {
+        items: items.map((item) => ({
+          variantId: item.variant.id,
+          quantity: item.quantity,
+        })),
+        address: {
+          phone: address.phone,
+          line1: address.line1,
+          city: address.city,
+          state: address.state,
+          pincode: address.pincode,
+        },
+        shippingMethod: shippingMethod as "standard" | "express",
+        paymentMethod: payment as "cod" | "prepaid",
+        ...(couponCode ? { couponCode } : {}),
+        // Pass email for guest checkout safety (ignored by backend if userId present)
+        email: address.email || user.email,
+      };
+
+      const res = await fetch(`${API_BASE}/checkout`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (errData.details && Array.isArray(errData.details)) {
+          const detailMsgs = errData.details
+            .map((d: any) => `${d.field}: ${d.message}`)
+            .join(", ");
+          throw new Error(`Validation failed — ${detailMsgs}`);
+        }
+        throw new Error(errData.error ?? `Order failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      const realOrderNumber: string =
+        data.order?.orderNumber ?? `WOW${Math.floor(Math.random() * 90000) + 10000}`;
+
+      // Save address if checked
+      if (saveAddressChecked && token) {
+        await fetch(`${API_BASE}/auth/addresses`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: address.name,
+            phone: address.phone,
+            line1: address.line1,
+            city: address.city,
+            state: address.state,
+            pincode: address.pincode
+          })
+        }).catch(() => {});
+      }
+
+      clearCart();
+      setOrderNumber(realOrderNumber);
+      // Refresh the user's order list so account page shows the new order immediately
+      fetchOrders();
+      setPlaced(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setOrderError(message);
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
   if (placed) {
@@ -68,7 +161,7 @@ export default function CheckoutPage() {
           <h1 className="font-serif text-3xl font-bold text-forest mb-3">Order Placed! 🎉</h1>
           <p className="text-warmgray-500 mb-2">Thank you for shopping with Wave of Wellness.</p>
           <p className="text-warmgray-400 text-sm mb-8">
-            Order #WOW{Math.floor(Math.random() * 90000) + 10000} · You will receive a confirmation email shortly.
+            Order #{orderNumber} · You will receive a confirmation email shortly.
           </p>
           <Link href="/account" className="btn-primary mr-3">Track Order</Link>
           <Link href="/collections/shop" className="btn-outline">Continue Shopping</Link>
@@ -121,6 +214,36 @@ export default function CheckoutPage() {
             {step === 1 && (
               <div className="bg-white rounded-2xl p-6 shadow-card">
                 <h2 className="font-serif text-xl font-bold text-forest mb-5">Delivery Address</h2>
+
+                {/* Saved address selector */}
+                {user?.addresses && user.addresses.length > 0 && (
+                  <div className="mb-6 p-4 rounded-xl bg-sage-50 border border-sage-100/60">
+                    <label className="block text-xs font-semibold text-sage-700 mb-2">Select from saved addresses:</label>
+                    <div className="flex flex-wrap gap-2">
+                      {user.addresses.map((addr) => (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          onClick={() => {
+                            setAddress({
+                              name: addr.name || user.name || "",
+                              phone: addr.phone || user.phone || "",
+                              email: user.email,
+                              line1: addr.line1,
+                              city: addr.city,
+                              state: addr.state,
+                              pincode: addr.pincode,
+                            });
+                          }}
+                          className="px-3 py-1.5 bg-white border border-warmgray-200 hover:border-sage-500 rounded-lg text-xs font-medium text-forest transition-colors shadow-sm"
+                        >
+                          {addr.name || "Address"} - {addr.city} ({addr.pincode})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   {[
                     { key: "name", label: "Full Name", placeholder: "Ananya Singh", col: 1 },
@@ -144,6 +267,17 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
+
+                <label className="flex items-center gap-2 text-xs text-warmgray-500 mt-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={saveAddressChecked}
+                    onChange={(e) => setSaveAddressChecked(e.target.checked)}
+                    className="rounded text-sage-600 focus:ring-sage-500"
+                  />
+                  Save this address to my profile
+                </label>
+
                 <button onClick={() => setStep(2)} className="btn-primary mt-6 w-full justify-center py-3.5">
                   Continue to Shipping →
                 </button>
@@ -224,8 +358,28 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                <button onClick={handlePlaceOrder} className="btn-coral w-full justify-center py-3.5 text-base">
-                  Place Order — {formatINR(grandTotal())} 🎉
+                {orderError && (
+                  <div className="mb-4 px-4 py-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm">
+                    {orderError}
+                  </div>
+                )}
+
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={isPlacing}
+                  className="btn-coral w-full justify-center py-3.5 text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isPlacing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      Placing Order…
+                    </span>
+                  ) : (
+                    <>Place Order — {formatINR(grandTotal())} 🎉</>
+                  )}
                 </button>
                 <p className="text-xs text-warmgray-400 text-center mt-3">
                   By placing your order, you agree to our Terms & Conditions.
