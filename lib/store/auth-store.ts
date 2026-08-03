@@ -30,6 +30,7 @@ export interface Order {
   total: number;
   createdAt: string;
   items: OrderItem[];
+  paymentMethod?: string
 }
 
 export interface User {
