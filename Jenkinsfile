@@ -57,8 +57,5 @@ pipeline {
             echo '❌ Frontend Build Failed'
         }
 
-        always {
-            cleanWs()
-        }
     }
 }
