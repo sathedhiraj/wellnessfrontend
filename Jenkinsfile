@@ -40,10 +40,8 @@ pipeline {
            pkill -f "next start" || true
           nohup npm start > app.log 2>&1 &
            '''
-    }
-}
-
-}
+       }
+     }
         
     
 
