@@ -34,7 +34,7 @@ pipeline {
         }
     }
 
-       state('Start Application'){
+       stage('Start Application'){
            steps {
             sh '''
             pkill -f "next start" || true
