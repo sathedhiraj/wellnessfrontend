@@ -42,7 +42,25 @@ pipeline {
             }
         }
 
+
+       stage('Deploy to Frontend') {
+          steps {
+        sh '''
+        ssh ubuntu@13.206.98.242
+        cd /var/www/frontend &&
+        git pull origin main &&
+        npm install &&
+        npm run build &&
+        pkill -f 'next start' || true &&
+        nohup npm start > app.log 2>&1 &
+        "
+        '''
     }
+}
+
+    }
+
+    
 
     post {
         success {
