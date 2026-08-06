@@ -43,25 +43,22 @@ pipeline {
         }
 
         stage('Deploy to Frontend') {
-    steps {
-        sh '''
-        ssh ubuntu@13.206.98.242 << 'EOF'
-        cd /var/www/frontend
-        git pull origin main
-        npm install
-        npm run build
-        pkill -f "next start" || true
-        nohup npm start > app.log 2>&1 &
-        EOF
-        '''
+            steps {
+                sh '''
+                ssh -o StrictHostKeyChecking=no ubuntu@10.0.1.157 << 'EOF'
+                cd /var/www/frontend
+                git pull origin main
+                npm install
+                npm run build
+                pkill -f "next start" || true
+                nohup npm start > app.log 2>&1 &
+                exit
+EOF
+                '''
+            }
+        }
+
     }
-}
-
-    
-
-    }
-
-    
 
     post {
         success {
