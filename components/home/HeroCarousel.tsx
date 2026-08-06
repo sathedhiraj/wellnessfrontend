@@ -9,7 +9,7 @@ const SLIDES = [
     id: 1,
     image: "/hero-banner.png",
     tagline: "Real Routines",
-    heading: "MOntu sathe Body Care\nBacked by Science",
+    heading: "Manisha Anti Body Care\nBacked by Science",
     sub: "Formulated with science-backed actives for skin that actually transforms.",
     cta: "Shop the Collection",
     href: "/collections/shop",
