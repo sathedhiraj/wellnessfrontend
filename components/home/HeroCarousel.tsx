@@ -9,7 +9,7 @@ const SLIDES = [
     id: 1,
     image: "/hero-banner.png",
     tagline: "Real Routines",
-    heading: "Body Care\nBacked by Science",
+    heading: "Dhiraj Body Care\nBacked by Science",
     sub: "Formulated with science-backed actives for skin that actually transforms.",
     cta: "Shop the Collection",
     href: "/collections/shop",
@@ -61,9 +61,8 @@ export function HeroCarousel() {
       {SLIDES.map((s, i) => (
         <div
           key={s.id}
-          className={`absolute inset-0 transition-opacity duration-700 ${
-            i === current ? "opacity-100" : "opacity-0"
-          }`}
+          className={`absolute inset-0 transition-opacity duration-700 ${i === current ? "opacity-100" : "opacity-0"
+            }`}
         >
           <Image
             src={s.image}
@@ -128,9 +127,8 @@ export function HeroCarousel() {
           <button
             key={i}
             onClick={() => setCurrent(i)}
-            className={`rounded-full transition-all duration-300 ${
-              i === current ? "w-6 h-2 bg-cream-50" : "w-2 h-2 bg-white/40"
-            }`}
+            className={`rounded-full transition-all duration-300 ${i === current ? "w-6 h-2 bg-cream-50" : "w-2 h-2 bg-white/40"
+              }`}
             aria-label={`Go to slide ${i + 1}`}
           />
         ))}
