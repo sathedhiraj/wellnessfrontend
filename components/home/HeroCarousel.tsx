@@ -9,7 +9,7 @@ const SLIDES = [
     id: 1,
     image: "/hero-banner.png",
     tagline: "Real Routines",
-    heading: "Om sathe Body Care\nBacked by Science",
+    heading: "Om sathe  body care Body Care\nBacked by Science",
     sub: "Formulated with science-backed actives for skin that actually transforms.",
     cta: "Shop the Collection",
     href: "/collections/shop",

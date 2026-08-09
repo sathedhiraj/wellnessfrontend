@@ -45,7 +45,7 @@ pipeline {
         stage('Deploy to Frontend') {
             steps {
                 sh '''
-                ssh -o StrictHostKeyChecking=no ubuntu@10.0.1.157 << 'EOF'
+                ssh -o StrictHostKeyChecking=no ubuntu@10.0.1.192 << 'EOF'
                 cd /var/www/frontend
                 git pull origin main
                 npm install
